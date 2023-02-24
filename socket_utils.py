@@ -1,9 +1,9 @@
-import cv2
-import threading
+import os
+import time
 import jpysocket
 import numpy as np
 from socket import *
-import time
+
 
 
 def get_current_timestamp():
@@ -20,7 +20,7 @@ def estimate_offset(host, port, result_dict, logger):
     connection, address = s.accept()
     # Receive the first wearOS timestamp from wearOS
     wearos_timestamp_1 = connection.recv(1024)
-    wearos_timestamp_1 = jpysocket.jpydecode(wearos_timestamp_1)
+    wearos_timestamp_1 = float(jpysocket.jpydecode(wearos_timestamp_1))
     result_dict['OFFSET_wearos_timestamp_1'] = wearos_timestamp_1
     logger.info("[Offset estimation]Received wearOS's first timestamp: " + str(wearos_timestamp_1))
     # Send the first PC timestamp to wearOS
@@ -31,7 +31,7 @@ def estimate_offset(host, port, result_dict, logger):
     result_dict['OFFSET_pc_timestamp_1'] = pc_time_stamp_1
     # Receive the second wearOS timestamp from wearOS
     wearos_timestamp_2 = connection.recv(1024)
-    wearos_timestamp_2 = jpysocket.jpydecode(wearos_timestamp_2)
+    wearos_timestamp_2 = float(jpysocket.jpydecode(wearos_timestamp_2))
     logger.info("[Offset estimation]Received wearOS's second timestamp: " + str(wearos_timestamp_2))
     result_dict['OFFSET_wearos_timestamp_2'] = wearos_timestamp_2
     # Send the second PC timestamp to wearOS
@@ -41,6 +41,13 @@ def estimate_offset(host, port, result_dict, logger):
     connection.send(pc_time_stamp_2_encode)
     result_dict['OFFSET_pc_time_stamp_2'] = pc_time_stamp_2
     s.close()
+
+    network_latency = ((wearos_timestamp_2 - wearos_timestamp_1) / 2. + (pc_time_stamp_2 - pc_time_stamp_1) / 2.) / 2
+    timestamp_offset = ((pc_time_stamp_1 - wearos_timestamp_1) + (pc_time_stamp_2 - wearos_timestamp_2)) / 2 - network_latency
+    result_dict['OFFSET_network_latency'] = network_latency
+    result_dict['OFFSET_timestamp_offset'] = timestamp_offset
+    print('Estimated network latency: ', network_latency, "ms")
+    print('Estimated timestamp offset between PC and wearOS: ', timestamp_offset, "ms")
     print("Finished offset estimation.")
     return result_dict
 
@@ -76,3 +83,26 @@ def wait_for_end_msg(host, port, end_status):
     msg = jpysocket.jpydecode(msg)
     s.close()
     end_status.append(True)
+
+def receive_file(host, port, save_path, filename):
+    filepath = os.path.join(save_path, filename)
+    file = open(filepath, 'wb')
+    s = socket(AF_INET, SOCK_STREAM)
+    s.bind((host, port))
+    s.listen(5)
+    connection, address = s.accept()
+    print('Start receiving ', filename)
+    line = s.recv(1024)
+    while (line):
+        file.write(line)
+        line = s.recv(1024)
+    file.close()
+    s.close()
+    print('Received', filename)
+
+
+
+
+
+
+

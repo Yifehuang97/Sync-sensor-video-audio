@@ -35,6 +35,7 @@ class VideoRecorder():
             self.logger.error("Fail to read frame from camera.")
 
     def record(self, end_status):
+        print("Video recording start.")
         frame_index = 0
         while True:
             frame_index += 1
@@ -57,6 +58,7 @@ class VideoRecorder():
         print(len(self.frame_timestamp_mapping_dict))
         with open(self.dict_save_path, "w") as outfile:
             json.dump(self.frame_timestamp_mapping_dict, outfile)
+        print("Video recording end.")
 
     def start(self, end_status):
         video_thread = threading.Thread(target=self.record, args=(end_status, ))
