@@ -12,9 +12,7 @@ def get_current_timestamp():
     return time_stamp
 
 
-def estimate_offset(host, port, result_dict, logger):
-    s = socket(AF_INET, SOCK_STREAM)
-    s.bind((host, port))
+def estimate_offset(s, result_dict, logger):
     s.listen(5)
     print("Waiting for the wearOS device to estimate the network offset......")
     connection, address = s.accept()
@@ -40,8 +38,6 @@ def estimate_offset(host, port, result_dict, logger):
     logger.info("[Offset estimation]Send PC's second timestamp: " + str(pc_time_stamp_2))
     connection.send(pc_time_stamp_2_encode)
     result_dict['OFFSET_pc_time_stamp_2'] = pc_time_stamp_2
-    s.close()
-
     network_latency = ((wearos_timestamp_2 - wearos_timestamp_1) / 2. + (pc_time_stamp_2 - pc_time_stamp_1) / 2.) / 2
     timestamp_offset = ((pc_time_stamp_1 - wearos_timestamp_1) + (pc_time_stamp_2 - wearos_timestamp_2)) / 2 - network_latency
     result_dict['OFFSET_network_latency'] = network_latency
@@ -52,9 +48,7 @@ def estimate_offset(host, port, result_dict, logger):
     return result_dict
 
 
-def receive_start_recording_msg(host, port, result_dict, logger):
-    s = socket(AF_INET, SOCK_STREAM)
-    s.bind((host, port))
+def receive_start_recording_msg(s, result_dict, logger):
     s.listen(5)
     print("Waiting for the start recording message from wearOS......")
     connection, address = s.accept()
@@ -70,34 +64,26 @@ def receive_start_recording_msg(host, port, result_dict, logger):
     connection.send(pc_start_timestamp_encode)
     result_dict['START_pc_start_timestamp'] = pc_start_timestamp
     print("Have received the start recording message from wearOS.")
-    s.close()
     return result_dict
 
 
-def wait_for_end_msg(host, port, end_status):
-    s = socket(AF_INET, SOCK_STREAM)
-    s.bind((host, port))
+def wait_for_end_msg(s, end_status):
     s.listen(5)
     connection, address = s.accept()
     msg = connection.recv(1024)
     msg = jpysocket.jpydecode(msg)
-    s.close()
     end_status.append(True)
 
-def receive_file(host, port, save_path, filename):
+def receive_file(s, save_path, filename):
     filepath = os.path.join(save_path, filename)
     file = open(filepath, 'wb')
-    s = socket(AF_INET, SOCK_STREAM)
-    s.bind((host, port))
     s.listen(5)
     connection, address = s.accept()
     print('Start receiving ', filename)
-    line = s.recv(1024)
+    line = connection.recv(1024)
     while (line):
         file.write(line)
-        line = s.recv(1024)
-    file.close()
-    s.close()
+        line = connection.recv(1024)
     print('Received', filename)
 
 

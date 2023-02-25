@@ -8,6 +8,7 @@ import time
 import numpy as np
 from pympler.asizeof import asizeof
 import logging
+from audio_recorder import AudioRecorder
 from video_recorder import VideoRecorder
 from socket_utils import get_current_timestamp, estimate_offset, receive_start_recording_msg, wait_for_end_msg, receive_file
 
@@ -22,6 +23,7 @@ parser.add_argument('--host', required=False, type=str, default='172.20.10.4',
 parser.add_argument('--port', required=False, type=int, default=8080,
                     help="Port of the PC socket server.")
 args = parser.parse_args()
+
 # Setting of data collection
 ROOT_DIR = args.save_path
 NAME = args.name
@@ -32,20 +34,29 @@ HOST = args.host
 PORT = args.port
 LOG_SAVE_PATH = os.path.join(SAVE_DIR, 'logging.log')
 logging.basicConfig(filename=LOG_SAVE_PATH, encoding='utf-8', level=logging.DEBUG)
+# Build Socket
+s = socket(AF_INET, SOCK_STREAM)
+s.bind((HOST, PORT))
+# Build Video recorder and audio recorder
 vid = VideoRecorder(SAVE_DIR, logging)
+aud = AudioRecorder(SAVE_DIR, logging)
 important_timestamp = {}
 ts = get_current_timestamp()
-estimate_offset(HOST, PORT, important_timestamp, logging)
-receive_start_recording_msg(HOST, PORT, important_timestamp, logging)
+estimate_offset(s, important_timestamp, logging)
+receive_start_recording_msg(s, important_timestamp, logging)
 status_q = list()
 status_q.append(False)
 # Start video recording thread
 vid.start(status_q)
+# Start audio recording thread
+aud.start(status_q)
 # Start end listening thread
-t1 = threading.Thread(target=wait_for_end_msg, args=(HOST, PORT, status_q,))
+t1 = threading.Thread(target=wait_for_end_msg, args=(s, status_q,))
 t1.start()
 with open(os.path.join(SAVE_DIR, "important_timestamp.json"), "w") as outfile:
     json.dump(important_timestamp, outfile)
-# Start receiving the sensor csv and watch audio
-receive_file(HOST, PORT, SAVE_DIR, "sensor.csv")
-receive_file(HOST, PORT, SAVE_DIR, "watch_audio.wav")
+t1.join()
+print('Closed connection.')
+s.close()
+
+
