@@ -38,8 +38,8 @@ def estimate_offset(s, result_dict, logger):
     logger.info("[Offset estimation]Send PC's second timestamp: " + str(pc_time_stamp_2))
     connection.send(pc_time_stamp_2_encode)
     result_dict['OFFSET_pc_time_stamp_2'] = pc_time_stamp_2
-    network_latency = ((wearos_timestamp_2 - wearos_timestamp_1) / 2. + (pc_time_stamp_2 - pc_time_stamp_1) / 2.) / 2
-    timestamp_offset = ((pc_time_stamp_1 - wearos_timestamp_1) + (pc_time_stamp_2 - wearos_timestamp_2)) / 2 - network_latency
+    network_latency = (wearos_timestamp_2 - wearos_timestamp_1) / 2.
+    timestamp_offset = (pc_time_stamp_1 - wearos_timestamp_1) - network_latency
     result_dict['OFFSET_network_latency'] = network_latency
     result_dict['OFFSET_timestamp_offset'] = timestamp_offset
     print('Estimated network latency: ', network_latency, "ms")
