@@ -44,6 +44,8 @@ class VideoRecorder():
                 time_stamp = get_current_timestamp()
                 self.frame_timestamp_mapping_dict[frame_index] = time_stamp
                 self.video_out.write(video_frame)
+                cv2.imshow('Video Capture', video_frame)
+                cv2.waitKey(1)
                 if frame_index == 1:
                     self.logger.info("Video recorder start video recording: " + str(time_stamp))
             is_end = end_status[-1]
